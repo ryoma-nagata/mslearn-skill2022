@@ -9,21 +9,30 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.tree import export_text
+from sklearn.ensemble import RandomForestRegressor
+
+# enable auto logging
+mlflow.autolog()
 
 def main(args):
 
-    # enable auto logging
-    mlflow.autolog()
 
-    # file_path = './data/daily-bike-share.csv'
-    bike_data = pd.read_csv(args.input_data)
-    bike_data.head()
+    with mlflow.start_run():
+        # file_path = './data/daily-bike-share.csv'
+        bike_data = pd.read_csv(args.input_data)
+        bike_data.head()
 
-    X_train, X_test, y_train, y_test = data_prep(bike_data)
+        X_train, X_test, y_train, y_test = data_prep(bike_data)
 
-    model = train_mode(X_train, y_train)
+        model ,tree= train_mode(X_train, y_train)
 
-    evaluate = evaluate_model(model,X_test,y_test)
+        metric ,fig  = evaluate_model(model,X_test,y_test)
+
+        mlflow.log_figure(fig,"evaluate.png")
+        mlflow.log_metrics(metric)
+        mlflow.log_text(tree,"tree.txt")
 
 
 # Dataprep
@@ -44,10 +53,14 @@ def train_mode(X_train, y_train):
 
     # Train the model
     # Fit a linear regression model on the training set
-    model = Lasso().fit(X_train, y_train)
-    print (model)
+    # Train the model
+    model = DecisionTreeRegressor().fit(X_train, y_train)
+    print (model, "\n")
 
-    return model
+    # Visualize the model tree
+    tree = export_text(model)
+
+    return model,tree
 
 # Evaluate
 def evaluate_model(model,X_test,y_test):
@@ -67,7 +80,7 @@ def evaluate_model(model,X_test,y_test):
     p = np.poly1d(z)
     plt.plot(y_test,p(y_test), color='magenta')
 
-    mlflow.log_figure(fig,"evaluate.png")
+    
 
     mse = mean_squared_error(y_test, predictions)
     print("MSE:", mse)
@@ -83,9 +96,9 @@ def evaluate_model(model,X_test,y_test):
         "RMSE":rmse,
         "R2":r2
     }
-    mlflow.log_metrics(metric)
+    
 
-    return metric
+    return metric , fig
     
 def parse_args():
    
@@ -103,6 +116,8 @@ def parse_args():
 if __name__ == "__main__":
     # parse args
     args = parse_args()
+
+
 
     # run main function
     main(args)
