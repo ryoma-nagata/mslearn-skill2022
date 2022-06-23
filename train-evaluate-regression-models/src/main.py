@@ -22,7 +22,7 @@ def main(args):
     with mlflow.start_run():
         # file_path = './data/daily-bike-share.csv'
         bike_data = pd.read_csv(args.input_data)
-        bike_data.head()
+        # bike_data.head()
 
         X_train, X_test, y_train, y_test = data_prep(bike_data)
         model = train_mode(X_train, y_train)
