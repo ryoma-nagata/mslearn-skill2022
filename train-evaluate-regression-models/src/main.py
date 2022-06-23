@@ -12,12 +12,12 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.tree import export_text
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
 
 # enable auto logging
 mlflow.autolog()
 
 def main(args):
-
 
     with mlflow.start_run():
         # file_path = './data/daily-bike-share.csv'
@@ -25,15 +25,11 @@ def main(args):
         bike_data.head()
 
         X_train, X_test, y_train, y_test = data_prep(bike_data)
-
-        model ,tree= train_mode(X_train, y_train)
-
+        model = train_mode(X_train, y_train)
         metric ,fig  = evaluate_model(model,X_test,y_test)
 
         mlflow.log_figure(fig,"evaluate.png")
         mlflow.log_metrics(metric)
-        mlflow.log_text(tree,"tree.txt")
-
 
 # Dataprep
 def data_prep(bike_data):
@@ -52,15 +48,10 @@ def data_prep(bike_data):
 def train_mode(X_train, y_train):
 
     # Train the model
-    # Fit a linear regression model on the training set
-    # Train the model
-    model = DecisionTreeRegressor().fit(X_train, y_train)
+    model = GradientBoostingRegressor().fit(X_train, y_train)
     print (model, "\n")
 
-    # Visualize the model tree
-    tree = export_text(model)
-
-    return model,tree
+    return model
 
 # Evaluate
 def evaluate_model(model,X_test,y_test):
@@ -79,9 +70,7 @@ def evaluate_model(model,X_test,y_test):
     z = np.polyfit(y_test, predictions, 1)
     p = np.poly1d(z)
     plt.plot(y_test,p(y_test), color='magenta')
-
-    
-
+   
     mse = mean_squared_error(y_test, predictions)
     print("MSE:", mse)
 
@@ -97,7 +86,6 @@ def evaluate_model(model,X_test,y_test):
         "R2":r2
     }
     
-
     return metric , fig
     
 def parse_args():
@@ -111,13 +99,10 @@ def parse_args():
     # return args
     return args
 
-
 # run script
 if __name__ == "__main__":
     # parse args
     args = parse_args()
-
-
 
     # run main function
     main(args)
