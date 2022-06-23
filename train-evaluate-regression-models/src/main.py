@@ -7,10 +7,11 @@ import argparse # 追加
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_squared_error, r2_score
 
 def main(args):
-    
+
     # enable auto logging
     mlflow.autolog()
 
@@ -43,7 +44,7 @@ def train_mode(X_train, y_train):
 
     # Train the model
     # Fit a linear regression model on the training set
-    model = LinearRegression().fit(X_train, y_train)
+    model = Lasso().fit(X_train, y_train)
     print (model)
 
     return model
