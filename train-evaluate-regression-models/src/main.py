@@ -1,4 +1,5 @@
 
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,6 +14,13 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.tree import export_text
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import make_scorer, r2_score
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+
 
 # enable auto logging
 mlflow.autolog()
@@ -24,13 +32,22 @@ def main(args):
         bike_data = pd.read_csv(args.input_data)
         # bike_data.head()
 
+        # Try these hyperparameter values
+
+        params = {
+            'regressor__n_estimators': list(range(20, 101, 10)),
+            'regressor__learning_rate': list(np.arange(0.05, 0.20, 0.01))
+            }
+        mlflow.log_params(params)
+
         X_train, X_test, y_train, y_test = data_prep(bike_data)
-        model = train_mode(X_train, y_train)
+        model = train_model(X_train, y_train,params)
         metric ,fig  = evaluate_model(model,X_test,y_test)
 
         mlflow.log_figure(fig,"evaluate.png")
         mlflow.log_metrics(metric)
-
+        mlflow.sklearn.log_model(model,artifact_path="model")
+        
 # Dataprep
 def data_prep(bike_data):
 
@@ -45,11 +62,40 @@ def data_prep(bike_data):
     return X_train, X_test, y_train, y_test
     
 # Train
-def train_mode(X_train, y_train):
+
+def train_model(X_train, y_train,params):
 
     # Train the model
-    model = GradientBoostingRegressor().fit(X_train, y_train)
-    print (model, "\n")
+
+
+    # Define preprocessing for numeric columns (scale them)
+    numeric_features = [6,7,8,9]
+    numeric_transformer = Pipeline(steps=[
+        ('scaler', StandardScaler())])
+
+    # Define preprocessing for categorical features (encode them)
+    categorical_features = [0,1,2,3,4,5]
+    categorical_transformer = Pipeline(steps=[
+        ('onehot', OneHotEncoder(handle_unknown='ignore'))])
+
+    # Combine preprocessing steps
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numeric_transformer, numeric_features),
+            ('cat', categorical_transformer, categorical_features)])
+
+    # Create preprocessing and training pipeline
+    pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                            ('regressor', GradientBoostingRegressor())])
+
+    score = make_scorer(r2_score)
+    gridsearch = GridSearchCV(pipeline, params, scoring=score, cv=3, return_train_score=True)
+    gridsearch.fit(X_train, y_train)
+    model = gridsearch.best_estimator_
+
+    print("Best parameter combination:", gridsearch.best_params_, "\n")
+
+    print (model)
 
     return model
 
